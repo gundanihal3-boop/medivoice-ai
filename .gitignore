@@ -1,0 +1,24 @@
+# Node dependencies
+node_modules/
+.npm
+
+# Build output
+dist/
+build/
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+server/medivoice.db
+
+# Environment variables
+.env
+.env.local
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
