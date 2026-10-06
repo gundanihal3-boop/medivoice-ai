@@ -21,7 +21,7 @@ router.get('/patients', (req: Request, res: Response) => {
 
 router.get('/patients/:query', (req: Request, res: Response) => {
   try {
-    const patient = PatientService.findByIdOrUhidOrMobile(req.params.query);
+    const patient = PatientService.findByIdOrUhidOrMobile(req.params.query as string);
     if (!patient) {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
@@ -90,7 +90,7 @@ router.get('/appointments', async (req: Request, res: Response) => {
 
 router.get('/appointments/:id', async (req: Request, res: Response) => {
   try {
-    const apt = await defaultAppointmentService.getAppointmentById(req.params.id);
+    const apt = await defaultAppointmentService.getAppointmentById(req.params.id as string);
     if (!apt) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
     }
@@ -121,7 +121,7 @@ router.post('/appointments', async (req: Request, res: Response) => {
 router.post('/appointments/:id/cancel', async (req: Request, res: Response) => {
   try {
     const { reason } = req.body;
-    const appointment = await defaultAppointmentService.cancelAppointment(req.params.id, reason);
+    const appointment = await defaultAppointmentService.cancelAppointment(req.params.id as string, reason);
     res.json({ success: true, appointment });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
@@ -131,7 +131,7 @@ router.post('/appointments/:id/cancel', async (req: Request, res: Response) => {
 router.patch('/appointments/:id', async (req: Request, res: Response) => {
   try {
     const { date, time } = req.body;
-    const appointment = await defaultAppointmentService.rescheduleAppointment(req.params.id, date, time);
+    const appointment = await defaultAppointmentService.rescheduleAppointment(req.params.id as string, date, time);
     res.json({ success: true, appointment });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
@@ -166,7 +166,7 @@ router.get('/calls', (req: Request, res: Response) => {
 
 router.get('/calls/:id', (req: Request, res: Response) => {
   try {
-    const session = CallSessionService.getSession(req.params.id);
+    const session = CallSessionService.getSession(req.params.id as string);
     if (!session) {
       return res.status(404).json({ success: false, message: 'Call session not found' });
     }
@@ -184,7 +184,7 @@ router.post('/calls/:id/interact', async (req: Request, res: Response) => {
     }
 
     const { aiResponse, updatedSession } = await AIEngine.processMessage({
-      callId: req.params.id,
+      callId: req.params.id as string,
       patientMessage: message
     });
 

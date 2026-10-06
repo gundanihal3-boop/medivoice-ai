@@ -146,7 +146,7 @@ export class AIEngine {
     const candidate = response.response.candidates?.[0];
     const functionCalls = candidate?.content?.parts?.filter(p => p.functionCall);
 
-    if (functionCalls && functionCalls.length > 0) {
+    if (candidate && candidate.content && functionCalls && functionCalls.length > 0) {
       for (const part of functionCalls) {
         const fc = part.functionCall!;
         const toolResult = await executeToolCall(callId, fc.name, fc.args);

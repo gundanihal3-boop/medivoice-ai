@@ -131,7 +131,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
         time: params.time,
         opdToken,
         bookingChannel: channel,
-        status: 'confirmed',
+        status: 'confirmed' as const,
         notes: params.notes,
         createdAt: now,
         updatedAt: now
@@ -142,7 +142,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
   }
 
   async cancelAppointment(appointmentId: string, reason?: string, callId?: string): Promise<Appointment> {
-    const cancelTx = db.transaction(() => {
+    const cancelTx = db.transaction((): Appointment => {
       const apt = this.getAppointmentByIdSync(appointmentId);
       if (!apt) {
         throw new Error(`APPOINTMENT_NOT_FOUND: Appointment ${appointmentId} does not exist.`);
@@ -170,7 +170,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
 
       return {
         ...apt,
-        status: 'cancelled',
+        status: 'cancelled' as const,
         notes: (apt.notes || '') + (reason ? ` [Cancelled: ${reason}]` : ' [Cancelled]'),
         updatedAt: now
       };
@@ -180,7 +180,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
   }
 
   async rescheduleAppointment(appointmentId: string, newDate: string, newTime: string, callId?: string): Promise<Appointment> {
-    const rescheduleTx = db.transaction(() => {
+    const rescheduleTx = db.transaction((): Appointment => {
       const apt = this.getAppointmentByIdSync(appointmentId);
       if (!apt) {
         throw new Error(`APPOINTMENT_NOT_FOUND: Appointment ${appointmentId} does not exist.`);
@@ -217,7 +217,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
         ...apt,
         date: newDate,
         time: newTime,
-        status: 'confirmed',
+        status: 'confirmed' as const,
         updatedAt: now
       };
     });
@@ -243,7 +243,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
       time: r.time,
       opdToken: r.opd_token,
       bookingChannel: r.booking_channel,
-      status: r.status,
+      status: r.status as Appointment['status'],
       notes: r.notes,
       createdAt: r.created_at,
       updatedAt: r.updated_at
@@ -263,7 +263,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
       time: r.time,
       opdToken: r.opd_token,
       bookingChannel: r.booking_channel,
-      status: r.status,
+      status: r.status as Appointment['status'],
       notes: r.notes,
       createdAt: r.created_at,
       updatedAt: r.updated_at
@@ -283,7 +283,7 @@ export class StandaloneAppointmentService implements IAppointmentService {
       time: r.time,
       opdToken: r.opd_token,
       bookingChannel: r.booking_channel,
-      status: r.status,
+      status: r.status as Appointment['status'],
       notes: r.notes,
       createdAt: r.created_at,
       updatedAt: r.updated_at

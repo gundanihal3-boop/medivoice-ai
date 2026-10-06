@@ -65,7 +65,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -121,7 +121,7 @@ export function App() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+      <footer className="bg-slate-900/80 backdrop-blur-md border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
         <p>MediVoice AI • Hospital Voice Appointment Assistant • Standalone Architecture (MedGuard Ready)</p>
       </footer>
     </div>
