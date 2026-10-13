@@ -15,6 +15,8 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(true);
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -43,19 +45,48 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
       recognition.onresult = (event: any) => {
-        const transcriptText = event.results[0][0].transcript;
-        console.log('🎤 Speech recognized:', transcriptText);
-        setIsListening(false);
-        handleSendMessage(transcriptText);
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (interimTranscript) {
+          setInputText(interimTranscript);
+        }
+
+        if (finalTranscript) {
+          console.log('🎤 Speech recognized:', finalTranscript);
+          setInputText(finalTranscript);
+          setIsListening(false);
+          setSpeechError(null);
+          handleSendMessage(finalTranscript);
+        }
       };
 
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition error:', event.error);
         setIsListening(false);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setSpeechError('Microphone access blocked. Please allow microphone permissions in your browser site settings.');
+        } else if (event.error === 'no-speech') {
+          setSpeechError('No speech detected. Please speak closer to your microphone or click the mic button to try again.');
+        } else if (event.error === 'audio-capture') {
+          setSpeechError('No microphone device found. Please plug in a microphone.');
+        } else if (event.error === 'network') {
+          setSpeechError('Speech recognition network error. Google speech recognition requires an internet connection in Chrome.');
+        } else if (event.error !== 'aborted') {
+          setSpeechError(`Speech recognition issue: ${event.error}`);
+        }
       };
 
       recognition.onend = () => {
@@ -63,12 +94,16 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
       };
 
       recognitionRef.current = recognition;
+      setIsSpeechSupported(true);
+    } else {
+      setIsSpeechSupported(false);
     }
-  }, [currentSession]);
+  }, []);
 
   const handleStartCall = async () => {
     try {
       setIsLoading(true);
+      setSpeechError(null);
       const session = await startCallSession();
       setCurrentSession(session);
       setIsCalling(true);
@@ -88,6 +123,7 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
   const handleEndCall = () => {
     setIsCalling(false);
     setIsListening(false);
+    setSpeechError(null);
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
     }
@@ -104,6 +140,7 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
     try {
       setIsLoading(true);
       setInputText('');
+      setSpeechError(null);
 
       const { aiResponse, session } = await interactWithCall(currentSession.callId, text);
       setCurrentSession(session);
@@ -120,21 +157,38 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
     }
   };
 
-  const toggleVoiceListening = () => {
-    if (!recognitionRef.current) {
-      alert('Web Speech API is not supported in this browser. You can use text mode below!');
+  const toggleVoiceListening = async () => {
+    setSpeechError(null);
+    if (!recognitionRef.current || !isSpeechSupported) {
+      setSpeechError('Web Speech API is not supported in this browser environment. You can use Text mode below!');
       return;
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
       setIsListening(false);
     } else {
       try {
+        // Request microphone permission explicitly via getUserMedia
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Stop track immediately as recognition will use its own mic pipeline
+          stream.getTracks().forEach(track => track.stop());
+        }
         recognitionRef.current.start();
         setIsListening(true);
-      } catch (e) {
-        console.error('Mic start error:', e);
+      } catch (e: any) {
+        console.error('Mic permission/start error:', e);
+        setIsListening(false);
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+          setSpeechError('Microphone permission was denied by browser. Please enable mic access in your browser site settings (lock icon near URL bar).');
+        } else if (e.name === 'NotFoundError') {
+          setSpeechError('No microphone found on this device.');
+        } else {
+          setSpeechError('Unable to start microphone: ' + (e.message || e.toString()));
+        }
       }
     }
   };
@@ -142,6 +196,12 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
   const speakText = (text: string) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel(); // Stop any active speech
+
+    // Stop active listening while AI speaks
+    if (isListening && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      setIsListening(false);
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
@@ -368,7 +428,22 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
           </div>
 
           {/* Input Controls */}
-          <div className="p-4 border-t border-slate-800 bg-slate-900 rounded-b-2xl">
+          <div className="p-4 border-t border-slate-800 bg-slate-900 rounded-b-2xl space-y-2">
+            {speechError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 text-xs text-red-300 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{speechError}</span>
+                </div>
+                <button
+                  onClick={() => setSpeechError(null)}
+                  className="text-red-400 hover:text-white font-bold ml-2 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center space-x-2">
               <button
                 type="button"
@@ -388,7 +463,13 @@ export const LiveCallView: React.FC<LiveCallViewProps> = ({ onCallUpdated }) => 
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={isCalling ? "Type patient message here (or speak via Mic)..." : "Start call to enable conversation..."}
+                placeholder={
+                  !isCalling
+                    ? "Start call to enable conversation..."
+                    : isListening
+                    ? "🎤 Listening... speak into your microphone..."
+                    : "Type patient message here (or click Mic to speak)..."
+                }
                 disabled={!isCalling || isLoading}
                 className="flex-1 px-4 py-3 bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-40"
               />

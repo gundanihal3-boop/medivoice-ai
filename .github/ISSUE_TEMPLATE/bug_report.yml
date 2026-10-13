@@ -1,0 +1,59 @@
+name: Bug Report
+description: File a bug report to help improve MediVoice AI
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: A concise summary of the issue.
+      placeholder: e.g. Microphone speech recognition stops after first sentence on Firefox
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce the problem?
+      placeholder: |
+        1. Open dashboard at localhost:3000
+        2. Click 'Start Live Call'
+        3. Click microphone icon and say 'Book appointment'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually occurred?
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Browser & OS
+      options:
+        - Chrome / Chromium
+        - Firefox
+        - Safari / WebKit
+        - Edge
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console Logs / Error Output
+      description: Please paste any browser console or terminal logs.
+      render: shell

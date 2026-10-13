@@ -4,11 +4,11 @@ export function seedDatabase() {
   console.log('🌱 Seeding MediVoice AI database...');
   initDatabase();
 
-  // Clear existing tables cleanly
+  // Clear existing tables cleanly in correct foreign key order
   db.exec(`
-    DELETE FROM appointments;
-    DELETE FROM call_sessions;
     DELETE FROM audit_events;
+    DELETE FROM call_sessions;
+    DELETE FROM appointments;
     DELETE FROM doctor_schedules;
     DELETE FROM doctors;
     DELETE FROM routing_rules;
